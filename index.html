@@ -105,6 +105,22 @@
     color: #d4ff00;
   }
 
+  /* Cache badge */
+  .cache-badge {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: #6b6b73;
+    padding: 5px 10px;
+    border: 1px solid #232328;
+    border-radius: 20px;
+    background: #131317;
+    white-space: nowrap;
+  }
+  .cache-badge.cached { color: #d4ff00; border-color: #2a3316; background: #1a1e12; }
+  .cache-badge.fresh  { color: #8a8a92; }
+
   /* ============================================================
      VIEW WRAPPER
      ============================================================ */
@@ -117,7 +133,7 @@
   .view.active { display: block; }
 
   /* ============================================================
-     STATUS (loading / error / empty)
+     STATUS
      ============================================================ */
   .status {
     text-align: center;
@@ -164,7 +180,7 @@
   }
 
   /* ============================================================
-     GRID CARD (compact, clickable)
+     GRID CARD
      ============================================================ */
   .grid-card {
     background: #16161a;
@@ -320,7 +336,7 @@
   }
 
   /* ============================================================
-     ============ THE LOCKED SCOREX CARD TEMPLATE ============
+     ============ LOCKED SCOREX CARD TEMPLATE ============
      ============================================================ */
   .card {
     width: 420px;
@@ -539,11 +555,8 @@
   .dot.W { background: #d4ff00; }
   .dot.D { background: #4a4a52; color: #c4c4cc; }
   .dot.L { background: #7f1d1d; color: #fca5a5; }
-  /* ============================================================
-     END LOCKED TEMPLATE
-     ============================================================ */
+  /* ============ END LOCKED TEMPLATE ============ */
 
-  /* Small screens */
   @media (max-width: 720px) {
     .app-header { padding: 12px 16px; }
     .app-controls { width: 100%; }
@@ -572,6 +585,7 @@
       <option value="all">All Leagues</option>
     </select>
     <button id="refreshBtn">↻ Refresh</button>
+    <span class="cache-badge" id="cacheBadge">—</span>
   </div>
 </header>
 
@@ -595,7 +609,6 @@
      ============================================================ -->
 <section class="view" id="viewPreview">
   <div class="preview-wrap">
-    <!-- The locked Scorex card — filled dynamically -->
     <div class="card" id="card">
       <div class="top">
         <div class="brand"><span class="dot"></span><span>SCOREXI</span><b>FOOTBALL</b></div>
@@ -652,7 +665,6 @@
       </div>
     </div>
 
-    <!-- Actions -->
     <div class="preview-actions">
       <button class="primary" id="downloadBtn">⬇️ Download PNG</button>
       <button id="backBtn">← Back to matches</button>
@@ -665,7 +677,7 @@
 
 <script>
 // ============================================================
-//  CONFIG — API + endpoints
+//  CONFIG — API + cache
 // ============================================================
 const API = {
   host: 'betminer.p.rapidapi.com',
@@ -673,11 +685,13 @@ const API = {
   path: (date) => `https://betminer.p.rapidapi.com/bm/v3/edge-analysis/${date}`
 };
 
+const CACHE_PREFIX = 'scorexi_cache_';
+
 // ============================================================
 //  STATE
 // ============================================================
-let allMatches = [];      // raw from API
-let currentMatch = null;  // currently previewed match
+let allMatches = [];
+let currentMatch = null;
 
 // ============================================================
 //  HELPERS
@@ -751,6 +765,70 @@ function renderForm(str) {
 }
 
 // ============================================================
+//  CACHE
+// ============================================================
+function cacheKey(dateISO) {
+  return CACHE_PREFIX + dateISO;
+}
+
+function getCached(dateISO) {
+  try {
+    const raw = localStorage.getItem(cacheKey(dateISO));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || !Array.isArray(parsed.matches)) return null;
+    return parsed;
+  } catch (e) {
+    console.warn('Cache read failed:', e);
+    return null;
+  }
+}
+
+function setCached(dateISO, matches) {
+  try {
+    const payload = {
+      date: dateISO,
+      fetchedAt: new Date().toISOString(),
+      matches
+    };
+    localStorage.setItem(cacheKey(dateISO), JSON.stringify(payload));
+  } catch (e) {
+    console.warn('Cache write failed:', e);
+  }
+}
+
+function clearCached(dateISO) {
+  try { localStorage.removeItem(cacheKey(dateISO)); } catch (e) {}
+}
+
+function listCachedDates() {
+  const out = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k && k.startsWith(CACHE_PREFIX)) out.push(k.slice(CACHE_PREFIX.length));
+  }
+  return out.sort();
+}
+
+function updateCacheBadge(state, extra) {
+  const el = document.getElementById('cacheBadge');
+  if (!el) return;
+  el.classList.remove('cached', 'fresh');
+
+  if (state === 'cached') {
+    el.textContent = `⚡ Cached · ${extra || ''}`;
+    el.classList.add('cached');
+  } else if (state === 'fresh') {
+    el.textContent = `☁️ Fresh fetch · ${extra || ''}`;
+    el.classList.add('fresh');
+  } else if (state === 'loading') {
+    el.textContent = 'Loading…';
+  } else {
+    el.textContent = '—';
+  }
+}
+
+// ============================================================
 //  API FETCH
 // ============================================================
 async function fetchMatches(date) {
@@ -769,7 +847,7 @@ async function fetchMatches(date) {
 }
 
 // ============================================================
-//  STATUS RENDERING
+//  STATUS
 // ============================================================
 function setStatus(elId, html) {
   const el = document.getElementById(elId);
@@ -777,19 +855,23 @@ function setStatus(elId, html) {
 }
 
 function showLoading() {
-  setStatus('gridStatus',
-    `<div class="spinner"></div>Loading matches…`);
-  document.getElementById('gridStatus').style.display = 'block';
+  const st = document.getElementById('gridStatus');
+  st.className = 'status';
+  setStatus('gridStatus', `<div class="spinner"></div>Loading matches…`);
+  st.style.display = 'block';
   document.getElementById('grid').style.display = 'none';
+  updateCacheBadge('loading');
 }
 
 function showError(msg) {
+  const st = document.getElementById('gridStatus');
+  st.className = 'status error';
   setStatus('gridStatus',
     `<div class="big">⚠️ Could not load matches</div>
      <div class="small">${msg}</div>`);
-  document.getElementById('gridStatus').className = 'status error';
-  document.getElementById('gridStatus').style.display = 'block';
+  st.style.display = 'block';
   document.getElementById('grid').style.display = 'none';
+  updateCacheBadge('error');
 }
 
 function hideStatus() {
@@ -872,8 +954,7 @@ function renderGrid() {
     `;
   }).join('');
 
-  // Attach click handlers
-  grid.querySelectorAll('.grid-card').forEach((el, i) => {
+  grid.querySelectorAll('.grid-card').forEach((el) => {
     el.addEventListener('click', () => {
       const idx = parseInt(el.dataset.idx, 10);
       openPreview(filtered[idx]);
@@ -882,7 +963,7 @@ function renderGrid() {
 }
 
 // ============================================================
-//  PREVIEW RENDERING — fills the locked Scorex card
+//  PREVIEW
 // ============================================================
 function openPreview(match) {
   currentMatch = match;
@@ -893,11 +974,9 @@ function openPreview(match) {
 function renderPreview(m) {
   const $ = (id) => document.getElementById(id);
 
-  // Header
   $('when').textContent = formatWhen(m.kickoff);
   $('league').textContent = m.competition?.name || '—';
 
-  // Teams
   $('homeLogo').src = m.home_team?.logo || '';
   $('homeName').textContent = m.home_team?.name || '—';
   $('awayLogo').src = m.away_team?.logo || '';
@@ -905,13 +984,11 @@ function renderPreview(m) {
   $('homeCode').textContent = shortCode(m.home_team?.name);
   $('awayCode').textContent = shortCode(m.away_team?.name);
 
-  // Prediction
   const pick = resultLabel(m.predictions?.result);
   const prob = pickProbability(m, m.predictions?.result);
   $('pick').textContent = prob != null ? `${pick} · ${prob}%` : pick;
   $('score').textContent = (m.predictions?.correct_score || '—').replace('-', ' – ');
 
-  // Odds (auto-favorite = lowest odd)
   const homeOdd = m.odds?.home_win ? parseFloat(m.odds.home_win) : null;
   const drawOdd = m.odds?.draw ? parseFloat(m.odds.draw) : null;
   const awayOdd = m.odds?.away_win ? parseFloat(m.odds.away_win) : null;
@@ -933,7 +1010,6 @@ function renderPreview(m) {
   setOdd($('oddDraw'), drawOdd);
   setOdd($('oddAway'), awayOdd);
 
-  // Extras
   const btts = m.predictions?.btts;
   $('btts').textContent = btts ? 'YES' : 'NO';
   $('btts').className = 'val ' + (btts ? 'g' : 'r');
@@ -944,7 +1020,6 @@ function renderPreview(m) {
 
   $('htft').textContent = htftShort(m.predictions?.htft);
 
-  // Form
   $('homeForm').innerHTML = renderForm(m.form?.home || '');
   $('awayForm').innerHTML = renderForm(m.form?.away || '');
 }
@@ -965,7 +1040,6 @@ async function downloadCurrentCard() {
   if (!currentMatch) return;
   const card = document.getElementById('card');
 
-  // Wait for logos to be loaded
   const imgs = card.querySelectorAll('img');
   await Promise.all([...imgs].map(img =>
     img.complete ? Promise.resolve() :
@@ -990,17 +1064,41 @@ async function downloadCurrentCard() {
 }
 
 // ============================================================
-//  MAIN LOAD
+//  MAIN LOAD — with caching
 // ============================================================
-async function loadDate(dateISO) {
+async function loadDate(dateISO, { forceRefresh = false } = {}) {
   showLoading();
+
+  // 1. Try cache (unless forced)
+  if (!forceRefresh) {
+    const cached = getCached(dateISO);
+    if (cached) {
+      console.log(`[cache] HIT for ${dateISO} — fetched ${cached.fetchedAt}`);
+      allMatches = cached.matches;
+      document.getElementById('gridDate').textContent = dateISO;
+      populateLeagueFilter(allMatches);
+      hideStatus();
+      renderGrid();
+      const t = new Date(cached.fetchedAt);
+      const stamp = `${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')}`;
+      updateCacheBadge('cached', stamp);
+      return;
+    }
+  }
+
+  // 2. Cache miss / forced → API
+  console.log(`[cache] ${forceRefresh ? 'FORCED' : 'MISS'} for ${dateISO} — hitting API`);
   try {
     const matches = await fetchMatches(dateISO);
     allMatches = matches;
+    setCached(dateISO, matches);
     document.getElementById('gridDate').textContent = dateISO;
     populateLeagueFilter(matches);
     hideStatus();
     renderGrid();
+    const now = new Date();
+    const stamp = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+    updateCacheBadge('fresh', stamp);
   } catch (err) {
     console.error(err);
     showError(err.message || 'Unknown error');
@@ -1019,7 +1117,7 @@ document.getElementById('leagueSelect').addEventListener('change', renderGrid);
 
 document.getElementById('refreshBtn').addEventListener('click', () => {
   const d = document.getElementById('dateInput').value || todayISO();
-  loadDate(d);
+  loadDate(d, { forceRefresh: true });
 });
 
 document.getElementById('downloadBtn').addEventListener('click', downloadCurrentCard);
@@ -1033,9 +1131,7 @@ document.addEventListener('keydown', (e) => {
     e.preventDefault();
     downloadCurrentCard();
   }
-  if (e.key === 'Escape') {
-    showView('grid');
-  }
+  if (e.key === 'Escape') showView('grid');
 });
 
 // ============================================================
