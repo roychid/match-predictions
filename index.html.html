@@ -1,0 +1,1051 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ScorexiFootball · Match Cards</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background: #0a0a0c;
+    color: #f0f0f2;
+    min-height: 100vh;
+    padding: 0;
+  }
+
+  /* ============================================================
+     TOP HEADER BAR
+     ============================================================ */
+  .app-header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(10, 10, 12, 0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid #1f1f24;
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .app-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 1.6px;
+    text-transform: uppercase;
+  }
+  .app-brand .dot {
+    width: 9px; height: 9px;
+    background: #d4ff00;
+    border-radius: 50%;
+    box-shadow: 0 0 12px rgba(212, 255, 0, 0.6);
+  }
+  .app-brand span { color: #8a8a92; }
+  .app-brand b { color: #d4ff00; }
+
+  .app-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .app-controls input,
+  .app-controls select {
+    background: #16161a;
+    color: #f0f0f2;
+    border: 1px solid #2a2a30;
+    border-radius: 9px;
+    padding: 9px 12px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .app-controls input:focus,
+  .app-controls select:focus {
+    border-color: #d4ff00;
+  }
+
+  .app-controls input[type="date"] {
+    color-scheme: dark;
+  }
+
+  .app-controls input::placeholder {
+    color: #55555c;
+  }
+
+  .app-controls button {
+    background: #1f1f24;
+    color: #f0f0f2;
+    border: 1px solid #2a2a30;
+    border-radius: 9px;
+    padding: 9px 14px;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .app-controls button:hover {
+    border-color: #d4ff00;
+    color: #d4ff00;
+  }
+
+  /* ============================================================
+     VIEW WRAPPER
+     ============================================================ */
+  .view {
+    display: none;
+    padding: 28px 24px 60px;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+  .view.active { display: block; }
+
+  /* ============================================================
+     STATUS (loading / error / empty)
+     ============================================================ */
+  .status {
+    text-align: center;
+    padding: 80px 20px;
+    color: #6b6b73;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+  .status .spinner {
+    width: 36px;
+    height: 36px;
+    border: 3px solid #1f1f24;
+    border-top-color: #d4ff00;
+    border-radius: 50%;
+    margin: 0 auto 20px;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .status.error { color: #f87171; }
+  .status .big { font-size: 18px; color: #f0f0f2; font-weight: 800; margin-bottom: 8px; }
+  .status .small { font-size: 12px; color: #6b6b73; margin-top: 6px; }
+
+  /* ============================================================
+     GRID
+     ============================================================ */
+  .grid-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    font-size: 12px;
+    color: #6b6b73;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .grid-meta b { color: #d4ff00; }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 16px;
+  }
+
+  /* ============================================================
+     GRID CARD (compact, clickable)
+     ============================================================ */
+  .grid-card {
+    background: #16161a;
+    border: 1px solid #232328;
+    border-radius: 14px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    position: relative;
+  }
+  .grid-card:hover {
+    border-color: #d4ff00;
+    transform: translateY(-3px);
+    box-shadow: 0 12px 32px rgba(212, 255, 0, 0.08);
+  }
+
+  .gc-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 11px 14px 8px;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: #6b6b73;
+  }
+  .gc-top .gc-league {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 70%;
+  }
+  .gc-top .gc-time { color: #8a8a92; }
+
+  .gc-teams {
+    padding: 4px 14px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .gc-team {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .gc-team img {
+    width: 26px; height: 26px;
+    object-fit: contain;
+    flex-shrink: 0;
+  }
+  .gc-team .gc-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: #e8e8ec;
+    letter-spacing: -0.1px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .gc-team.away .gc-name { color: #b8b8c0; }
+
+  .gc-footer {
+    padding: 10px 14px;
+    border-top: 1px solid #1f1f24;
+    background: #131317;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .gc-pick {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: #d4ff00;
+  }
+
+  .gc-prob {
+    font-size: 10px;
+    font-weight: 800;
+    color: #6b6b73;
+    letter-spacing: 0.6px;
+  }
+
+  /* ============================================================
+     PREVIEW VIEW
+     ============================================================ */
+  .preview-wrap {
+    display: flex;
+    gap: 40px;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 20px 0 60px;
+    flex-wrap: wrap;
+  }
+
+  .preview-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding-top: 20px;
+    min-width: 200px;
+  }
+
+  .preview-actions button {
+    padding: 14px 20px;
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    cursor: pointer;
+    border: 1px solid #2a2a30;
+    background: #1f1f24;
+    color: #f0f0f2;
+    transition: all 0.15s;
+    text-align: left;
+  }
+  .preview-actions button:hover {
+    border-color: #d4ff00;
+    color: #d4ff00;
+  }
+  .preview-actions button.primary {
+    background: #d4ff00;
+    color: #0a0a0c;
+    border-color: #d4ff00;
+  }
+  .preview-actions button.primary:hover {
+    background: #c2eb00;
+    color: #0a0a0c;
+  }
+
+  .preview-hint {
+    font-size: 11px;
+    color: #55555c;
+    font-weight: 600;
+    letter-spacing: 0.4px;
+    margin-top: 4px;
+    line-height: 1.6;
+  }
+  .preview-hint kbd {
+    background: #1f1f24;
+    border: 1px solid #2a2a30;
+    border-radius: 4px;
+    padding: 1px 5px;
+    color: #8a8a92;
+    font-family: inherit;
+    font-size: 10px;
+  }
+
+  /* ============================================================
+     ============ THE LOCKED SCOREX CARD TEMPLATE ============
+     ============================================================ */
+  .card {
+    width: 420px;
+    background: #16161a;
+    border-radius: 18px;
+    overflow: hidden;
+    color: #f0f0f2;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #d4ff00, #a3cc00);
+    z-index: 5;
+  }
+
+  .top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 22px 24px 8px;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 1.6px;
+    text-transform: uppercase;
+  }
+  .brand .dot {
+    width: 8px; height: 8px;
+    background: #d4ff00;
+    border-radius: 50%;
+    box-shadow: 0 0 10px rgba(212, 255, 0, 0.5);
+  }
+  .brand span { color: #8a8a92; }
+  .brand b { color: #d4ff00; }
+  .when {
+    font-size: 11px;
+    color: #8a8a92;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+
+  .matchup { padding: 8px 24px 24px; }
+  .league {
+    font-size: 10px;
+    color: #6b6b73;
+    font-weight: 700;
+    letter-spacing: 1.6px;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+  .teams {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .team {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    min-width: 0;
+  }
+  .team.away { flex-direction: row-reverse; text-align: right; }
+  .team img {
+    width: 48px; height: 48px;
+    object-fit: contain;
+    flex-shrink: 0;
+  }
+  .team .name {
+    font-size: 14px;
+    font-weight: 800;
+    color: #f0f0f2;
+    letter-spacing: -0.2px;
+    line-height: 1.2;
+    min-width: 0;
+    word-break: break-word;
+  }
+  .middle {
+    font-size: 11px;
+    font-weight: 800;
+    color: #4a4a52;
+    padding: 0 6px;
+    flex-shrink: 0;
+  }
+
+  .pred {
+    background: #1f1f24;
+    border-radius: 12px;
+    padding: 16px 18px;
+    margin: 0 24px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+  }
+  .pred .lbl {
+    font-size: 9px;
+    color: #6b6b73;
+    font-weight: 800;
+    letter-spacing: 1.6px;
+    text-transform: uppercase;
+    margin-bottom: 5px;
+  }
+  .pred .val {
+    font-size: 18px;
+    font-weight: 900;
+    color: #d4ff00;
+    letter-spacing: -0.3px;
+    line-height: 1.1;
+  }
+  .pred .score { text-align: right; flex-shrink: 0; }
+  .pred .score .num {
+    font-size: 22px;
+    font-weight: 900;
+    color: #f0f0f2;
+    letter-spacing: -0.5px;
+    line-height: 1;
+    margin-top: 4px;
+  }
+
+  .odds {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    padding: 0 24px 20px;
+  }
+  .odd {
+    background: #1f1f24;
+    border-radius: 10px;
+    padding: 12px 8px;
+    text-align: center;
+  }
+  .odd .lbl {
+    font-size: 9px;
+    color: #6b6b73;
+    font-weight: 800;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .odd .val {
+    font-size: 18px;
+    font-weight: 900;
+    color: #f0f0f2;
+    letter-spacing: -0.3px;
+  }
+  .odd.fav { background: #232a1a; }
+  .odd.fav .val { color: #d4ff00; }
+
+  .row {
+    display: flex;
+    justify-content: space-between;
+    padding: 16px 24px;
+    border-top: 1px solid #232328;
+  }
+  .row .item { text-align: center; flex: 1; }
+  .row .item:not(:last-child) { border-right: 1px solid #232328; }
+  .row .lbl {
+    color: #6b6b73;
+    font-weight: 800;
+    font-size: 9px;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .row .val {
+    color: #f0f0f2;
+    font-weight: 800;
+    font-size: 13px;
+  }
+  .row .val.g { color: #d4ff00; }
+  .row .val.r { color: #f87171; }
+
+  .form {
+    display: flex;
+    justify-content: space-between;
+    padding: 14px 24px;
+    border-top: 1px solid #232328;
+    background: #131317;
+  }
+  .form-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 10px;
+  }
+  .form-row .code {
+    color: #6b6b73;
+    font-weight: 800;
+    letter-spacing: 0.6px;
+    font-size: 10px;
+    width: 30px;
+  }
+  .dots { display: flex; gap: 4px; }
+  .dot {
+    width: 16px; height: 16px;
+    border-radius: 4px;
+    font-size: 9px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #0a0a0c;
+  }
+  .dot.W { background: #d4ff00; }
+  .dot.D { background: #4a4a52; color: #c4c4cc; }
+  .dot.L { background: #7f1d1d; color: #fca5a5; }
+  /* ============================================================
+     END LOCKED TEMPLATE
+     ============================================================ */
+
+  /* Small screens */
+  @media (max-width: 720px) {
+    .app-header { padding: 12px 16px; }
+    .app-controls { width: 100%; }
+    .app-controls input,
+    .app-controls select,
+    .app-controls button { flex: 1; }
+    .view { padding: 20px 16px 60px; }
+    .card { width: 100%; max-width: 420px; }
+    .preview-actions { width: 100%; }
+    .preview-actions button { text-align: center; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     HEADER
+     ============================================================ -->
+<header class="app-header">
+  <div class="app-brand"><span class="dot"></span><span>SCOREXI</span><b>FOOTBALL</b></div>
+
+  <div class="app-controls">
+    <input type="date" id="dateInput" />
+    <input type="text" id="searchInput" placeholder="Search team..." />
+    <select id="leagueSelect">
+      <option value="all">All Leagues</option>
+    </select>
+    <button id="refreshBtn">↻ Refresh</button>
+  </div>
+</header>
+
+<!-- ============================================================
+     VIEW 1 — GRID
+     ============================================================ -->
+<section class="view active" id="viewGrid">
+  <div class="grid-meta">
+    <span>Matches · <b id="gridCount">0</b></span>
+    <span id="gridDate"></span>
+  </div>
+  <div id="gridStatus" class="status">
+    <div class="spinner"></div>
+    Loading matches…
+  </div>
+  <div class="grid" id="grid"></div>
+</section>
+
+<!-- ============================================================
+     VIEW 2 — PREVIEW
+     ============================================================ -->
+<section class="view" id="viewPreview">
+  <div class="preview-wrap">
+    <!-- The locked Scorex card — filled dynamically -->
+    <div class="card" id="card">
+      <div class="top">
+        <div class="brand"><span class="dot"></span><span>SCOREXI</span><b>FOOTBALL</b></div>
+        <div class="when" id="when">—</div>
+      </div>
+
+      <div class="matchup">
+        <div class="league" id="league">—</div>
+        <div class="teams">
+          <div class="team">
+            <img id="homeLogo" src="" alt="">
+            <div class="name" id="homeName"></div>
+          </div>
+          <div class="middle">VS</div>
+          <div class="team away">
+            <img id="awayLogo" src="" alt="">
+            <div class="name" id="awayName"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="pred">
+        <div>
+          <div class="lbl">Prediction</div>
+          <div class="val" id="pick">—</div>
+        </div>
+        <div class="score">
+          <div class="lbl" style="text-align:right;">Score</div>
+          <div class="num" id="score">—</div>
+        </div>
+      </div>
+
+      <div class="odds">
+        <div class="odd" id="oddHome"><div class="lbl">Home</div><div class="val">—</div></div>
+        <div class="odd" id="oddDraw"><div class="lbl">Draw</div><div class="val">—</div></div>
+        <div class="odd" id="oddAway"><div class="lbl">Away</div><div class="val">—</div></div>
+      </div>
+
+      <div class="row">
+        <div class="item"><div class="lbl">BTTS</div><div class="val" id="btts">—</div></div>
+        <div class="item"><div class="lbl">Over 2.5</div><div class="val" id="over25">—</div></div>
+        <div class="item"><div class="lbl">HT/FT</div><div class="val" id="htft">—</div></div>
+      </div>
+
+      <div class="form">
+        <div class="form-row">
+          <span class="code" id="homeCode">—</span>
+          <div class="dots" id="homeForm"></div>
+        </div>
+        <div class="form-row">
+          <span class="code" id="awayCode">—</span>
+          <div class="dots" id="awayForm"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="preview-actions">
+      <button class="primary" id="downloadBtn">⬇️ Download PNG</button>
+      <button id="backBtn">← Back to matches</button>
+      <div class="preview-hint">
+        <kbd>S</kbd> download · <kbd>Esc</kbd> back
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+// ============================================================
+//  CONFIG — API + endpoints
+// ============================================================
+const API = {
+  host: 'betminer.p.rapidapi.com',
+  key:  'b1d4f776c5msh0a5a6ce81cd9670p1e5ae8jsn169c02186937',
+  path: (date) => `https://betminer.p.rapidapi.com/bm/v3/edge-analysis/${date}`
+};
+
+// ============================================================
+//  STATE
+// ============================================================
+let allMatches = [];      // raw from API
+let currentMatch = null;  // currently previewed match
+
+// ============================================================
+//  HELPERS
+// ============================================================
+function todayISO() {
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function formatWhen(iso) {
+  const d = new Date(iso);
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mm = String(d.getMinutes()).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  const mon = d.toLocaleString('en-GB', { month: 'short' }).toUpperCase();
+  return `${hh}:${mm} · ${day} ${mon}`;
+}
+
+function shortCode(name) {
+  if (!name) return '—';
+  const clean = name.replace(/[^A-Za-z0-9]/g, '');
+  return clean.slice(0, 3).toUpperCase();
+}
+
+function resultLabel(result) {
+  const map = {
+    home_win: 'HOME WIN',
+    away_win: 'AWAY WIN',
+    home_or_draw: 'HOME OR DRAW',
+    away_or_draw: 'AWAY OR DRAW',
+    home_or_away: 'HOME OR AWAY',
+    draw: 'DRAW'
+  };
+  return map[result] || (result || '—').toString().toUpperCase();
+}
+
+function pickProbability(match, result) {
+  const p = match.probabilities || {};
+  switch (result) {
+    case 'home_win':      return p.home_win;
+    case 'away_win':      return p.away_win;
+    case 'draw':          return p.draw;
+    case 'home_or_draw':  return (p.home_win != null && p.draw != null) ? p.home_win + p.draw : null;
+    case 'away_or_draw':  return (p.away_win != null && p.draw != null) ? p.away_win + p.draw : null;
+    case 'home_or_away':  return (p.home_win != null && p.away_win != null) ? p.home_win + p.away_win : null;
+    default:              return null;
+  }
+}
+
+function htftShort(htft) {
+  if (!htft) return '—';
+  const parts = htft.split('/');
+  const short = (s) => {
+    const t = s.trim().toLowerCase();
+    if (t.startsWith('home')) return 'HOME';
+    if (t.startsWith('away')) return 'AWAY';
+    if (t.startsWith('draw')) return 'DRAW';
+    return s.trim().toUpperCase();
+  };
+  return parts.map(short).join('/');
+}
+
+function renderForm(str) {
+  if (!str) return '';
+  return str.split('').map(c =>
+    `<span class="dot ${c}">${c}</span>`
+  ).join('');
+}
+
+// ============================================================
+//  API FETCH
+// ============================================================
+async function fetchMatches(date) {
+  const url = API.path(date);
+  const res = await fetch(url, {
+    method: 'GET',
+    headers: {
+      'x-rapidapi-key': API.key,
+      'x-rapidapi-host': API.host
+    }
+  });
+  if (!res.ok) throw new Error(`API ${res.status} ${res.statusText}`);
+  const json = await res.json();
+  if (!json.success) throw new Error('API returned success:false');
+  return json.data || [];
+}
+
+// ============================================================
+//  STATUS RENDERING
+// ============================================================
+function setStatus(elId, html) {
+  const el = document.getElementById(elId);
+  el.innerHTML = html;
+}
+
+function showLoading() {
+  setStatus('gridStatus',
+    `<div class="spinner"></div>Loading matches…`);
+  document.getElementById('gridStatus').style.display = 'block';
+  document.getElementById('grid').style.display = 'none';
+}
+
+function showError(msg) {
+  setStatus('gridStatus',
+    `<div class="big">⚠️ Could not load matches</div>
+     <div class="small">${msg}</div>`);
+  document.getElementById('gridStatus').className = 'status error';
+  document.getElementById('gridStatus').style.display = 'block';
+  document.getElementById('grid').style.display = 'none';
+}
+
+function hideStatus() {
+  document.getElementById('gridStatus').style.display = 'none';
+  document.getElementById('grid').style.display = 'grid';
+}
+
+// ============================================================
+//  GRID RENDERING
+// ============================================================
+function populateLeagueFilter(matches) {
+  const sel = document.getElementById('leagueSelect');
+  const current = sel.value;
+  const leagues = [...new Set(matches.map(m => m.competition?.name).filter(Boolean))].sort();
+
+  sel.innerHTML = '<option value="all">All Leagues</option>' +
+    leagues.map(l => `<option value="${l}">${l}</option>`).join('');
+
+  if ([...sel.options].some(o => o.value === current)) sel.value = current;
+}
+
+function getFilteredMatches() {
+  const q = document.getElementById('searchInput').value.trim().toLowerCase();
+  const league = document.getElementById('leagueSelect').value;
+
+  return allMatches.filter(m => {
+    const matchLeague = m.competition?.name || '';
+    if (league !== 'all' && matchLeague !== league) return false;
+    if (!q) return true;
+    const haystack = `${m.home_team?.name || ''} ${m.away_team?.name || ''}`.toLowerCase();
+    return haystack.includes(q);
+  });
+}
+
+function renderGrid() {
+  const grid = document.getElementById('grid');
+  const filtered = getFilteredMatches();
+
+  document.getElementById('gridCount').textContent = filtered.length;
+
+  if (filtered.length === 0) {
+    grid.innerHTML = `<div class="status" style="grid-column:1/-1;">
+      <div class="big">No matches found</div>
+      <div class="small">Try a different date or filter</div>
+    </div>`;
+    return;
+  }
+
+  grid.innerHTML = filtered.map((m, i) => {
+    const pick = resultLabel(m.predictions?.result);
+    const prob = pickProbability(m, m.predictions?.result);
+    const homeName = m.home_team?.name || '—';
+    const awayName = m.away_team?.name || '—';
+    const homeLogo = m.home_team?.logo || '';
+    const awayLogo = m.away_team?.logo || '';
+    const league = m.competition?.name || '—';
+    const when = formatWhen(m.kickoff);
+
+    return `
+      <div class="grid-card" data-idx="${i}">
+        <div class="gc-top">
+          <span class="gc-league">${league}</span>
+          <span class="gc-time">${when}</span>
+        </div>
+        <div class="gc-teams">
+          <div class="gc-team">
+            <img src="${homeLogo}" alt="" crossorigin="anonymous">
+            <div class="gc-name">${homeName}</div>
+          </div>
+          <div class="gc-team away">
+            <img src="${awayLogo}" alt="" crossorigin="anonymous">
+            <div class="gc-name">${awayName}</div>
+          </div>
+        </div>
+        <div class="gc-footer">
+          <span class="gc-pick">${pick}</span>
+          <span class="gc-prob">${prob != null ? prob + '%' : ''}</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // Attach click handlers
+  grid.querySelectorAll('.grid-card').forEach((el, i) => {
+    el.addEventListener('click', () => {
+      const idx = parseInt(el.dataset.idx, 10);
+      openPreview(filtered[idx]);
+    });
+  });
+}
+
+// ============================================================
+//  PREVIEW RENDERING — fills the locked Scorex card
+// ============================================================
+function openPreview(match) {
+  currentMatch = match;
+  renderPreview(match);
+  showView('preview');
+}
+
+function renderPreview(m) {
+  const $ = (id) => document.getElementById(id);
+
+  // Header
+  $('when').textContent = formatWhen(m.kickoff);
+  $('league').textContent = m.competition?.name || '—';
+
+  // Teams
+  $('homeLogo').src = m.home_team?.logo || '';
+  $('homeName').textContent = m.home_team?.name || '—';
+  $('awayLogo').src = m.away_team?.logo || '';
+  $('awayName').textContent = m.away_team?.name || '—';
+  $('homeCode').textContent = shortCode(m.home_team?.name);
+  $('awayCode').textContent = shortCode(m.away_team?.name);
+
+  // Prediction
+  const pick = resultLabel(m.predictions?.result);
+  const prob = pickProbability(m, m.predictions?.result);
+  $('pick').textContent = prob != null ? `${pick} · ${prob}%` : pick;
+  $('score').textContent = (m.predictions?.correct_score || '—').replace('-', ' – ');
+
+  // Odds (auto-favorite = lowest odd)
+  const homeOdd = m.odds?.home_win ? parseFloat(m.odds.home_win) : null;
+  const drawOdd = m.odds?.draw ? parseFloat(m.odds.draw) : null;
+  const awayOdd = m.odds?.away_win ? parseFloat(m.odds.away_win) : null;
+
+  const oddVals = [
+    { el: $('oddHome'), val: homeOdd },
+    { el: $('oddDraw'), val: drawOdd },
+    { el: $('oddAway'), val: awayOdd }
+  ].filter(o => o.val != null && !isNaN(o.val));
+
+  const minOdd = oddVals.length ? Math.min(...oddVals.map(o => o.val)) : null;
+
+  const setOdd = (el, val) => {
+    const v = el.querySelector('.val');
+    v.textContent = (val != null && !isNaN(val)) ? val.toFixed(2) : '—';
+    el.classList.toggle('fav', val != null && val === minOdd);
+  };
+  setOdd($('oddHome'), homeOdd);
+  setOdd($('oddDraw'), drawOdd);
+  setOdd($('oddAway'), awayOdd);
+
+  // Extras
+  const btts = m.predictions?.btts;
+  $('btts').textContent = btts ? 'YES' : 'NO';
+  $('btts').className = 'val ' + (btts ? 'g' : 'r');
+
+  const o25 = m.predictions?.over_25;
+  $('over25').textContent = o25 ? 'YES' : 'NO';
+  $('over25').className = 'val ' + (o25 ? 'g' : 'r');
+
+  $('htft').textContent = htftShort(m.predictions?.htft);
+
+  // Form
+  $('homeForm').innerHTML = renderForm(m.form?.home || '');
+  $('awayForm').innerHTML = renderForm(m.form?.away || '');
+}
+
+// ============================================================
+//  VIEW SWITCHING
+// ============================================================
+function showView(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById(name === 'preview' ? 'viewPreview' : 'viewGrid').classList.add('active');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ============================================================
+//  PNG EXPORT
+// ============================================================
+async function downloadCurrentCard() {
+  if (!currentMatch) return;
+  const card = document.getElementById('card');
+
+  // Wait for logos to be loaded
+  const imgs = card.querySelectorAll('img');
+  await Promise.all([...imgs].map(img =>
+    img.complete ? Promise.resolve() :
+    new Promise(res => { img.onload = img.onerror = res; })
+  ));
+
+  const canvas = await html2canvas(card, {
+    backgroundColor: '#0a0a0c',
+    scale: 3,
+    useCORS: true,
+    logging: false
+  });
+
+  const home = (currentMatch.home_team?.name || 'home').replace(/\W+/g, '_');
+  const away = (currentMatch.away_team?.name || 'away').replace(/\W+/g, '_');
+  const filename = `scorexi_${home}_vs_${away}.png`;
+
+  const link = document.createElement('a');
+  link.download = filename;
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+}
+
+// ============================================================
+//  MAIN LOAD
+// ============================================================
+async function loadDate(dateISO) {
+  showLoading();
+  try {
+    const matches = await fetchMatches(dateISO);
+    allMatches = matches;
+    document.getElementById('gridDate').textContent = dateISO;
+    populateLeagueFilter(matches);
+    hideStatus();
+    renderGrid();
+  } catch (err) {
+    console.error(err);
+    showError(err.message || 'Unknown error');
+  }
+}
+
+// ============================================================
+//  EVENTS
+// ============================================================
+document.getElementById('dateInput').addEventListener('change', (e) => {
+  if (e.target.value) loadDate(e.target.value);
+});
+
+document.getElementById('searchInput').addEventListener('input', renderGrid);
+document.getElementById('leagueSelect').addEventListener('change', renderGrid);
+
+document.getElementById('refreshBtn').addEventListener('click', () => {
+  const d = document.getElementById('dateInput').value || todayISO();
+  loadDate(d);
+});
+
+document.getElementById('downloadBtn').addEventListener('click', downloadCurrentCard);
+document.getElementById('backBtn').addEventListener('click', () => showView('grid'));
+
+document.addEventListener('keydown', (e) => {
+  const previewActive = document.getElementById('viewPreview').classList.contains('active');
+  if (!previewActive) return;
+
+  if (e.key.toLowerCase() === 's' && !e.metaKey && !e.ctrlKey) {
+    e.preventDefault();
+    downloadCurrentCard();
+  }
+  if (e.key === 'Escape') {
+    showView('grid');
+  }
+});
+
+// ============================================================
+//  INIT
+// ============================================================
+(function init() {
+  const today = todayISO();
+  document.getElementById('dateInput').value = today;
+  loadDate(today);
+})();
+</script>
+</body>
+</html>
